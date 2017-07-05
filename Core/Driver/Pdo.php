@@ -2,12 +2,12 @@
 
 namespace Core\Driver;
 
-class Redis {
+class Pdo {
 
     /**
-     * @var \Redis 
+     * @var \PDO
      */
-    private $redis;
+    private $pdo;
 
     /**
      * @var String 
@@ -20,22 +20,18 @@ class Redis {
     static private $_cache = array();
 
     private function __construct($alias) {
-        $config = \Core\Config::get("redis/{$alias}");
+        $config = \Core\Config::get("mysql/{$alias}");
         if ($config && is_array($config)) {
-            $this->redis = new \Redis();
-            $this->redis->connect($config['host'], $config['port'], $config['timeout'], NULL, $config['read_timeout']);
-            if (isset($config['password']) && $config['password']) {
-                $this->redis->auth($config['password']);
-            }
+            $this->pdo = new \PDO("mysql:dbname={$config['database']};host={$config['host']}:{$config['port']}", $config['username'], $config['password'], array(\PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC));
             $this->alias = $alias;
         } else {
-            throw new \Core\ConsumerException('Redis配置错误', 1010);
+            throw new \Core\ConsumerException('Mysql配置错误', 1011);
         }
     }
 
     /**
      * @param string $alias
-     * @return \Redis
+     * @return \PDO
      */
     static public function instance($alias) {
         if (!static::$_cache[$alias]) {
@@ -45,14 +41,13 @@ class Redis {
     }
 
     public function __call($name, $arguments) {
-        return call_user_func_array(array($this->redis, $name), $arguments);
+        return call_user_func_array(array($this->pdo, $name), $arguments);
     }
 
     /**
      * 关闭
      */
     public function close() {
-        static::$_cache[$this->alias]->close();
         unset(static::$_cache[$this->alias]);
     }
 
